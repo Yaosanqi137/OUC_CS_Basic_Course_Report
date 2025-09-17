@@ -1,0 +1,345 @@
+
+\documentclass[UTF8]{gyh}
+
+\usepackage{amsmath}
+\usepackage{cases}
+\usepackage{cite}
+\usepackage[margin=1in]{geometry}
+\geometry{a4paper}
+\usepackage{fancyhdr}
+\usepackage{listings} % 添加 listings 宏包以使用 lstlisting 环境
+\pagestyle{fancy}
+\usepackage{graphicx}
+\usepackage{indentfirst}
+\usepackage{float}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}   % 推荐添加，用于代码颜色
+
+\lstset{
+extendedchars=\true, % 开启扩展字符集，支持UTF-8
+literate=
+{<}{\textless}1
+{>}{\textgreater}1,
+frame=single               % 添加边框
+}
+
+\title{系统开发工具基础实验报告三}
+\author{古宇恒}
+\date{\today}
+\pagenumbering{arabic}
+
+\begin{document}
+
+\fancyhead[C]{命令行环境与Python图形库}
+\fancyfoot[C]{\thepage}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section{摘要}
+本实验报告将实践 Linux 命令行环境配置、python 基础用法及python的一些常用图像处理库。
+
+本文开源地址：\href{https://github.com/Yaosanqi137/OUC_CS_Basic_Course_Report}{https://github.com/Yaosanqi137/OUC\_CS\_Basic\_Course\_Report}
+
+\section{Linux命令行环境}
+
+\subsection{通过SSH\ Client登入Linux}
+
+在没有显示器连接计算机的时候，我们可以通过 SSH 服务,通过默认端口22远程访问登录 Linux 操作系统。
+
+当然，Linux 还有很多不同的发行版，比如 Debian、Ubuntu、CentOS、Kali 等等，当然，还有让人意想不到的，比如 \boldsymbol{OpenWrt} 路由器操作系统，基础用法大同小异，这篇文章就使用我宿舍路由器做演示。
+
+使用 XShell SSH 客户机软件，输入以下指令登入路由器 SSH：
+
+\begin{lstlisting}
+ssh root@192.168.0.1 # root 表示登录账户，192.168.0.1 为路由器 IP 地址
+\end{lstlisting}
+
+当然，你也可以使用ssh-key登录你的主机，这是更加安全的选择，我们可以使用ssh-keygen来生成一对密钥
+
+\begin{lstlisting}
+ssh-keygen -o -a 100 -t ed25519 -f ~/.ssh/id_rsa
+\end{lstlisting}
+
+然后将生成的公钥复制粘贴进主机的~/.ssh/authorized\_keys中即可
+
+在连接成功后将显示欢迎界面和命令输入栏，之后我们就可以开始我们的操作。
+
+\subsection{Linux 任务控制}
+
+\subsubsection{关闭进程}
+
+在某些时候，我们在Linux系统上运行一些程序或执行某些Shell指令时，发现程序或指令无法终止或无法很快终止，此时，我们需要终止程序，我们可以按下\boldsymbol{Ctrl-C}
+
+这是一个 UNIX 提供的终止信号（SIGINT），此外，我们还有Ctrl+\textbackslash (SIGQUIT)，一般情况下，程序在接收到该信号时会立刻终止程序，但是也有例外情况
+
+此时，我们还可以通过杀死进程的指令：
+
+\begin{lstlisting}
+kill -9 "程序PID" # -9为强制退出
+\end{lstlisting}
+
+同时，如果需要获取程序的PID，我们可以通过这个这个指令获取：
+
+\begin{lstlisting}
+ps aux # aux 为常用参数，用于显示所有用户的、没有控制终端的详细的进程信息
+\end{lstlisting}
+
+\photo{1}{img/img.png}{查看程序PID}
+
+\subsubsection{暂停、恢复进程}
+
+当然，我们也可以暂停进程，按下\boldsymbol{Ctrl-Z}，就可以发送SIGSTP信号，实现进程暂停，如果需要恢复，则可以输入这两个指令：
+
+\begin{lstlisting}
+fg
+# 或者使用
+bg
+\end{lstlisting}
+
+当然，如果你想查看目前有多少个程序是被暂停了，可以使用这个指令：
+
+\begin{lstlisting}
+jobs
+\end{lstlisting}
+
+\subsubsection{后台运行程序}
+
+如果不想在终端上运行，理论上来说，可以直接用nohup或\&来实现，但是这样并不现代，尤其是需要多次、重复运行的程序或脚本。
+
+我们可以使用screen软件包来实现这个功能，这是更加现代的方案
+
+\begin{lstlisting}
+# 安装screen软件包
+apt/yum/opkg/pkg等包管理器 install screen
+
+# 创建screen
+screen -S “screen名”
+
+# 进入screen
+screen -r "screen名"
+\end{lstlisting}
+
+screen可以理解为一个新的终端，在操作上是很简单的，并且可以随时回来查看程序的运行情况或调整程序，如果需要退出screen，可以先后按下\boldsymbol{Ctrl-A\ Ctrl-D}来退出screen
+
+当然，如果不需要另外操作程序，只需要程序自己运行，还可以将其注册成一个服务（service），并交由systemd、service等服务管理程序管理
+
+\subsection{Linux 别名}
+
+如果一个指令很常用，但是使用起来很繁琐，特别长，那么可以使用别名来简化。比如，如果使用Neovim来代替原版vim，但是neovim的使用指令是nvim，与原版的vim相比，指令并不顺手，我们可以使用别名进行替换
+
+\begin{lstlisting}
+alias vim="nvim" # 这里如果只输入vim，会显示对应的原指令
+\end{lstlisting}
+
+当然，如果想要禁用别名，我们可以使用：
+
+\begin{lstlisting}
+unalias "要禁用的别名"
+\end{lstlisting}
+
+如果需要临时禁用，则在指令前打上"\textbackslash"即可
+
+\subsection{Linux 隐藏文件}
+
+在Linux中，如果文件名的第一个字符为"."，那么该文件会被隐藏，直接输入ls指令是无法查看的，但是允许正常操作，一般被用于软件包的配置文件，比如ssh的配置文件在~/.ssh中
+
+
+\section{Python基础操作}
+
+\subsection{简介}
+Python 是一种解释型、面向对象、动态数据类型的高级程序设计语言。因其简洁的语法和强大的第三方库生态系统，在数据科学、Web开发、自动化脚本等领域得到了广泛应用。
+
+\subsection{变量与数据类型}
+Python是动态类型语言，这意味着你不需要预先声明变量的类型。变量的类型是在你给它赋值时确定的。
+
+基本数据类型包括：
+\begin{itemize}
+    \item \textbf{整型 (int)}: 整数，如 \texttt{10}, \texttt{-5}。
+    \item \textbf{浮点型 (float)}: 小数，如 \texttt{3.14}, \texttt{-0.5}。
+    \item \textbf{字符串 (str)}: 文本数据，使用单引号或双引号括起来，如 \texttt{'hello'}。
+    \item \textbf{布尔型 (bool)}: 表示真或假，只有两个值 \texttt{True} 和 \texttt{False}。(注意大小写)
+\end{itemize}
+
+\begin{lstlisting}
+x = 10            # 整型
+pi = 3.14         # 浮点型
+name = "Alice"    # 字符串
+is_student = True # 布尔型
+
+print(type(x), type(pi), type(name), type(is_student))
+\end{lstlisting}
+
+\subsection{数据结构}
+Python 内置了多种有用的数据结构，其中最常用的是列表、元组和字典。
+\begin{itemize}
+    \item \textbf{列表 (list)}: 可变的有序集合。可以添加、删除和修改元素。
+    \item \textbf{元组 (tuple)}: 不可变的有序集合。一旦创建，就不能修改。
+    \item \textbf{字典 (dict)}: 无序的键值对（key-value）集合。通过键来访问值，效率很高。
+\end{itemize}
+
+\begin{lstlisting}
+# 列表
+fruits = ["apple", "banana", "cherry"]
+fruits.append("orange") # 添加元素
+print(fruits[1])      # 输出: banana
+
+# 元组
+coordinates = (10.0, 20.0)
+print(coordinates[0]) # 输出: 10.0
+
+# 字典
+student = {"name": "Bob", "age": 22, "major": "CS"}
+print(student["name"]) # 输出: Bob
+\end{lstlisting}
+
+\subsection{控制流}
+通过条件语句和循环语句，可以控制程序的执行流程。
+\begin{itemize}
+    \item \textbf{if-elif-else 语句}: 用于条件判断。
+    \item \textbf{for 循环}: 用于遍历序列等。
+    \item \textbf{while 循环}: 在条件为True时重复执行代码块。
+\end{itemize}
+
+\begin{lstlisting}
+age = 18
+if age >= 18:
+    print("Adult")
+else:
+    print("Minor")
+
+for i in range(5): # 遍历 0 到 4
+    print(i)
+\end{lstlisting}
+
+\subsection{函数}
+函数是组织好的、可重复使用的，用来实现单一或相关联功能的代码段。使用 \texttt{def} 关键字来定义函数。
+
+\begin{lstlisting}
+def greet(name):
+    return f"Hello, {name}!"
+
+message = greet("World")
+print(message) # 输出: Hello, World!
+\end{lstlisting}
+
+\section{Python 图像处理}
+Python 强大的生态系统提供了多个优秀的图像处理库。这里分别介绍Pillow、Numpy、Scipy和OpenCV库
+
+\photo{1}{img/img_1.png}{测试样图}
+
+\subsection{Pillow 库}
+Pillow 是 Python Imaging Library (PIL) 的一个活跃分支，它是一个功能强大且易于使用的图像处理库。Pillow 提供了广泛的文件格式支持，以及丰富的图像基本操作，如裁剪、缩放、旋转、颜色转换和滤镜应用等。
+
+安装指令：
+\begin{lstlisting}[language=bash]
+pip install pillow
+\end{lstlisting}
+
+\subsubsection{基本图像操作示例}
+
+这里使用Pillow来增加对比度作为样例
+
+\begin{lstlisting}
+from PIL import Image,ImageEnhance
+img_original = Image.open("fufu.png")
+img_original.show("Original Image")
+img = ImageEnhance.Contrast(img_original)
+img.enhance(3.8).show("Image With More Contrast")
+
+\end{lstlisting}
+
+\photo{1}{img/img_2.png}{运行结果}
+
+\subsection{Numpy库}
+
+NumPy代表Numerical Python。它是一个Python库，可以帮助我们处理所有类型的科学计算。NumPy是在执行任何类型的数据预处理或数据科学相关任务时导入的第一个库。此外，它还可以用来进行图像处理操作。
+
+安装指令：
+\begin{lstlisting}[language=bash]
+pip install numpy
+\end{lstlisting}
+
+\subsubsection{基本图像操作示例}
+
+这里以numpy分离RGB通道为例
+
+\begin{lstlisting}
+from PIL import Image
+import numpy as np
+img = np.array(Image.open('fufu.png'))
+img_red = img.copy()
+img_red[:, :, (1, 2)] = 0
+img_green = img.copy()
+img_green[:, :, (0, 2)] = 0
+img_blue = img.copy()
+img_blue[:, :, (0, 1)] = 0
+img_ORGB = np.concatenate((img,img_red, img_green, img_blue), axis=1)
+img_converted = Image.fromarray(img_ORGB)
+img_converted.show()
+\end{lstlisting}
+
+\photo{1}{img/img_3.png}{运行结果}
+
+\subsection{Scipy库}
+
+Scipy是Python中主要用于数学和科学计算的库，但同时它也可以用于处理多维图像。这是一个非常大的库，包含许多科学计算的工具。当使用Scipy库进行图像处理时，只需导入scipy.ndimage模块即可。
+
+安装指令：
+\begin{lstlisting}[language=bash]
+pip install scipy
+\end{lstlisting}
+
+\subsubsection{基本图像操作示例}
+
+这里以Scipy高斯模糊为例
+
+\begin{lstlisting}
+from scipy import misc
+from scipy.ndimage import gaussian_filter
+import matplotlib.pyplot as plt
+fig = plt.figure()
+plt.gray()
+ax1 = fig.add_subplot(121)
+ax2 = fig.add_subplot(122)
+ascent = misc.ascent()
+result = gaussian_filter(ascent, sigma=5)
+ax1.imshow(ascent)
+ax2.imshow(result)
+plt.show()
+\end{lstlisting}
+
+\photo{1}{img/img_4.png}{运行结果}
+
+\subsection{OpenCV库}
+
+OpenCV是最常用的一种图像处理库，可以方便地与网络摄像头、图像和视频进行交互。它可以执行多种实时任务，于2000年首次发布。它因其简单性和代码可读性而出名。目前，它主要用于计算机视觉任务，如人脸检测和识别、目标检测等。
+
+安装指令：
+\begin{lstlisting}[language=bash]
+pip install opencv-python
+\end{lstlisting}
+
+\subsubsection{基本图像操作演示}
+
+这里以OpenCV的crop操作为例
+
+\begin{lstlisting}
+from scipy import misc
+from scipy.ndimage import gaussian_filter
+import matplotlib.pyplot as plt
+fig = plt.figure()
+plt.gray()
+ax1 = fig.add_subplot(121)
+ax2 = fig.add_subplot(122)
+ascent = misc.ascent()
+result = gaussian_filter(ascent, sigma=5)
+ax1.imshow(ascent)
+ax2.imshow(result)
+plt.show()
+\end{lstlisting}
+
+\photo{1}{img/img_5.png}{运行结果}
+
+\end{document}
