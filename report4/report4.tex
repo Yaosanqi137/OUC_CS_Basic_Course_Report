@@ -1,0 +1,409 @@
+
+\documentclass[UTF8]{gyh}
+
+\usepackage{amsmath}
+\usepackage{cases}
+\usepackage{cite}
+\usepackage[margin=1in]{geometry}
+\geometry{a4paper}
+\usepackage{fancyhdr}
+\usepackage{listings} % 添加 listings 宏包以使用 lstlisting 环境
+\pagestyle{fancy}
+\usepackage{graphicx}
+\usepackage{indentfirst}
+\usepackage{float}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}   % 推荐添加，用于代码颜色
+
+\lstset{
+extendedchars=\true, % 开启扩展字符集，支持UTF-8
+literate=
+{<}{\textless}1
+{>}{\textgreater}1,
+frame=single               % 添加边框
+}
+
+\title{系统开发工具基础实验报告四}
+\author{古宇恒}
+\date{\today}
+\pagenumbering{arabic}
+
+\begin{document}
+
+\fancyhead[C]{性能分析调试及Pytorch入门}
+\fancyfoot[C]{\thepage}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section{摘要}
+本实验报告旨在深入探讨现代软件开发中的关键工具与技术，主要涵盖三大核心领域：性能分析与调试、元编程与自动化构建，以及流行的深度学习框架 PyTorch 的基础知识。通过本报告的梳理与总结，期望能为后续的系统开发实践奠定坚实的基础。
+
+\section{第一部分：性能分析与调试}
+\subsection{调试的重要性}
+在编程中，代码很少能一次性完美运行。调试是定位并修复代码中错误（Bug）的关键过程。一个高效的调试流程能极大缩短开发周期，提高代码质量。所有程序员，无论经验水平如何，都会花费大量时间进行调试。因此，掌握系统化的调试策略和工具至关重要。
+
+\subsection{打印调试法}
+最简单直接的调试方法是在代码的关键位置插入 print 语句，输出变量值或程序执行状态，从而追踪程序的运行逻辑。
+
+\begin{lstlisting}
+def my_function(data):
+result = 0
+for i, value in enumerate(data):
+print(f"Iteration {i}: current value = {value}, result = {result}")
+result += value
+return result
+
+my_function()
+\end{lstlisting}
+
+\subsection{日志系统}
+相比于临时添加的 print 语句，日志系统更为强大和规范。
+
+\begin{lstlisting}
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+logging.debug("这是一条调试信息，通常用于开发阶段。")
+logging.info("程序正常运行。")
+logging.warning("出现了一个小问题，但不影响核心功能。")
+logging.error("发生了一个错误，程序可能无法继续。")
+\end{lstlisting}
+
+\subsection{为日志着色}
+为了提高日志的可读性，可以使用 ANSI escape codes 为终端输出添加颜色。
+
+\begin{lstlisting}
+
+# 打印红色的 "Error:"
+echo -e "\e[31mError:\e[0m Something went wrong."
+
+# 打印绿色的 "Success:"
+echo -e "\e[32mSuccess:\e[0m Task completed."
+
+# 打印黄色的 "Warning:"
+echo -e "\e[33mWarning:\e[0m Please check the configuration."
+\end{lstlisting}
+
+\subsection{系统日志}
+现代操作系统通常有统一的系统日志服务。在 Linux 中，systemd 将日志记录在 /var/log/journal，可通过 journalctl 查看。
+
+\begin{lstlisting}
+
+# 查看所有systemd日志
+journalctl
+
+# 查看特定服务的日志（例如 sshd）
+journalctl -xeu sshd
+
+# 直接使用 systemctl 也可以
+systemctl status sshd
+\end{lstlisting}
+
+\photo{1}{img/img.png}{systemctl示例}
+
+\photo{1}{img/img_1.png}{journalctl示例}
+
+\subsection{交互式调试器}
+当打印调试不足以解决问题时，就需要使用调试器，如 Python 的 pdb 或 C/C++ 的 gdb。
+
+\begin{lstlisting}
+
+# 在命令行中直接对脚本 my_script.py 启动pdb调试
+python -m pdb my_script.py
+\end{lstlisting}
+
+\subsection{pdb 常用命令}
+\begin{itemize}
+\item l(ist): 显示当前行附近的代码。
+\item n(ext): 执行到下一行（函数调用被视为一步）。
+\item s(tep): 单步执行，如果当前是函数调用，则进入函数内部。
+\item b(reak) [lineno]: 在指定行号设置断点。
+\item c(ontinue): 继续执行，直到遇到下一个断点。
+\item p(rint) [expression]: 打印表达式的值。
+\item q(uit): 退出调试器。
+\end{itemize}
+
+\subsection{静态分析}
+静态分析工具可以在不运行代码的情况下检查代码中的潜在错误，如变量覆盖、未定义变量、类型不匹配等。
+
+\begin{lstlisting}
+
+# 假设有一个名为 main.py 的文件
+# 使用 mypy 进行类型检查
+mypy main.py
+
+# 使用 pyflakes 检查潜在错误
+pyflakes main.py
+\end{lstlisting}
+
+\subsection{代码风格检查}
+Linter 是一种静态分析工具，用于检查代码是否符合特定的编码规范和风格指南。Python 中常用的工具有 pylint 和 pep8。
+
+\begin{lstlisting}
+pylint your_module.py
+\end{lstlisting}
+
+\subsection{CPU 分析器}
+\begin{itemize}
+\item 追踪分析器 (Tracing Profiler): 记录每一次函数调用。虽然精确，但会带来较大的性能开销。
+\item 采样分析器 (Sampling Profiler): 周期性地检查程序堆栈，性能开销小，适用于生产环境。
+\end{itemize}
+Python 内置的 cProfile 是一个确定性分析器，它会记录所有函数调用。
+
+\begin{lstlisting}
+
+# 对脚本 a_script.py 进行性能分析，并将结果按累计时间排序
+python -m cProfile -s cumulative a_script.py
+\end{lstlisting}
+
+\subsection{内存分析}
+内存分析器用于检测内存泄漏或不合理的内存使用。对于 Python 这类有垃圾回收机制的语言，它可以帮助我们发现那些因为存在引用而无法被回收的对象。
+
+\begin{lstlisting}
+
+# 在需要分析的函数上添加 @profile 装饰器
+from memory_profiler import profile
+
+@profile
+def create_large_list():
+return [i for i in range(1000000)]
+
+if name == 'main':
+create_large_list()
+
+# 然后在命令行中运行: python -m memory_profiler your_script_name.py
+\end{lstlisting}
+
+\subsection{可视化分析工具}
+\begin{itemize}
+\item 火焰图 (Flame Graph): 一种可交互的可视化工具，用于展示采样分析器的数据，能直观地显示出函数调用的耗时比例。火焰图的宽度代表函数在总耗时中的占比，堆栈的深度则代表函数调用的层级。
+\end{itemize}
+\begin{lstlisting}
+
+# 安装 py-spy: pip install py-spy
+# 对一个正在运行的Python进程（PID）进行采样并生成火焰图
+sudo py-spy record -p <PID> --output profile.svg
+\end{lstlisting}
+
+\section{第二部分：元编程与自动化}
+
+\subsection{构建系统}
+构建系统用于自动化执行从源码到最终产品的多步骤过程。make 是一个经典的构建系统，它通过 Makefile 文件来定义目标、依赖和构建规则。当依赖项比目标更新时，make 会自动执行相应的命令来重新生成目标。
+
+\begin{lstlisting}
+
+# Makefile
+paper.pdf: paper.tex plot.png
+pdflatex paper.tex
+
+plot.png: data.csv plot.py
+python plot.py -i data.csv -o plot.png
+
+clean:
+rm -f *.aux *.log paper.pdf plot.png
+\end{lstlisting}
+
+\subsection{依赖管理}
+现代软件开发严重依赖于第三方库。依赖管理工具（如 Python 的 pip、Node.js 的 npm）帮助我们自动下载、安装和管理这些依赖项。一个常见的做法是使用 requirements.txt 文件来声明项目的所有 Python 依赖。
+
+\begin{lstlisting}
+
+# requirements.txt
+numpy==1.21.0
+pandas>=1.3.0
+matplotlib
+\end{lstlisting}
+
+\begin{lstlisting}
+pip install -r requirements.txt
+\end{lstlisting}
+
+\subsection{语义化版本控制}
+为了解决依赖更新可能带来的兼容性问题，语义化版本控制（格式为 主版本号.次版本号.修订号）被广泛采用。
+
+\subsection{持续集成 (CI)}
+CI 是一种自动化流程，当代码仓库发生变更时，会自动执行构建、测试、部署等一系列操作。这确保了新的代码提交不会破坏现有功能，并能及早发现问题。GitHub Actions 是一个流行的 CI/CD 工具。
+
+\begin{lstlisting}
+
+# .github/workflows/ci.yml
+name: Python CI
+
+on: [push, pull_request]
+
+jobs:
+build:
+runs-on: ubuntu-latest
+steps:
+- uses: actions/checkout@v2
+- name: Set up Python
+uses: actions/setup-python@v2
+with:
+python-version: '3.8'
+- name: Install dependencies
+run: |
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+- name: Test with pytest
+run: |
+pytest
+\end{lstlisting}
+
+\subsection{软件测试的类型}
+\begin{itemize}
+\item 单元测试 (Unit Test): 对代码中最小的可测试单元（如函数、类）进行测试。
+\item 集成测试 (Integration Test): 测试多个组件或模块协同工作时是否符合预期。
+\item 回归测试 (Regression Test): 确保新的代码修改没有引入新的错误或导致旧的功能失效。
+\end{itemize}
+\begin{lstlisting}
+import unittest
+
+def add(a, b):
+return a + b
+
+class TestAdd(unittest.TestCase):
+def test_add_integers(self):
+self.assertEqual(add(1, 2), 3)
+
+ code Codedownloadcontent_copy
+expand_less
+
+    def test_add_floats(self):
+    self.assertAlmostEqual(add(0.1, 0.2), 0.3)
+
+
+
+
+if name == 'main':
+unittest.main()
+\end{lstlisting}
+
+\section{第三部分：PyTorch 入门}
+\subsection{PyTorch 简介}
+PyTorch 是由 Facebook 开发的开源机器学习库，以其灵活性和动态计算图（Dynamic Computational Graph）而闻名，特别适合于研究和快速原型开发。它与 Python 紧密集成，语法直观，深受学术界和工业界的喜爱。
+
+\subsection{张量}
+张量是 PyTorch 中最基本的数据结构，类似于 NumPy 的 ndarray，但增加了在 GPU 上进行计算的能力。
+
+\begin{lstlisting}
+import torch
+
+# 创建一个未初始化的 5x3 矩阵
+x = torch.empty(5, 3)
+print(x)
+
+# 创建一个随机初始化的矩阵
+x = torch.rand(5, 3)
+print(x)
+
+# 创建一个全零矩阵并指定数据类型
+x = torch.zeros(5, 3, dtype=torch.long)
+print(x)
+
+# 加法操作
+y = torch.rand(5, 3)
+print(x + y)
+\end{lstlisting}
+
+\subsection{自动微分}
+PyTorch 的 autograd 模块为张量上的所有操作提供自动微分功能。通过设置 requires_grad=True，PyTorch 会自动追踪其上的所有操作，并能自动计算梯度，这是构建神经网络的核心。当调用 .backward() 时，计算图会自动计算所有需要梯度的张量相对于该变量的梯度。
+
+\begin{lstlisting}
+import torch
+
+# 创建一个张量并设置 requires_grad=True 来追踪计算}
+x = torch.ones(2, 2, requires_grad=True)
+print(x)
+
+# 对张量进行操作
+y = x + 2
+z = y * y * 3
+out = z.mean()
+
+# 计算梯度
+out.backward()
+
+# 打印梯度 d(out)/dx}
+print(x.grad)
+\end{lstlisting}
+
+\subsection{神经网络模块}
+torch.nn 模块提供了构建神经网络所需的所有基本组件，如各种网络层（线性层、卷积层等）、激活函数（ReLU、Sigmoid 等）和损失函数。通过继承 nn.Module，可以方便地定义自己的网络结构。
+
+\begin{lstlisting}
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class Net(nn.Module):
+    def init(self):
+        super(Net, self).init()
+        # 1 input image channel, 6 output channels, 5x5 square convolution
+        self.conv1 = nn.Conv2d(1, 6, 5)
+        self.pool = nn.MaxPool2d(2, 2)
+        self.fc1 = nn.Linear(6 * 12 * 12, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
+
+    def forward(self, x):
+        x = self.pool(F.relu(self.conv1(x)))
+        x = x.view(-1, 6 * 12 * 12)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+net = Net()
+print(net)
+\end{lstlisting}
+
+\subsection{优化器}
+torch.optim 模块实现了各种优化算法，如 SGD、Adam、RMSprop 等，用于在训练过程中更新模型的权重。优化器接收模型参数和学习率等超参数，并在 optimizer.step() 调用时更新参数。
+
+\begin{lstlisting}
+import torch.optim as optim
+import torch.nn as nn
+
+# 假设 net 是我们定义的 nn.Module 实例
+net = Net()
+
+# 定义损失函数和优化器
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
+
+# 在训练循环中:
+optimizer.zero_grad() # 清除旧的梯度
+loss.backward()       # 反向传播计算梯度
+optimizer.step()      # 更新权重
+\end{lstlisting}
+
+\subsection{数据加载与预处理}
+PyTorch 提供了 Dataset 和 DataLoader 类，用于方便地加载、预处理和批量化数据，极大地简化了数据处理流程。Dataset 负责封装数据源和样本的获取，而 DataLoader 则负责将 Dataset 包装成一个可迭代对象，并支持多线程加载、数据打乱和批处理。
+
+\begin{lstlisting}
+import torch
+from torch.utils.data import TensorDataset, DataLoader
+
+# 加载特征和标签张量
+features = torch.randn(100, 10) # 100个样本, 10个特征
+labels = torch.randint(0, 2, (100,)) # 100个标签
+
+# 创建 Dataset
+dataset = TensorDataset(features, labels)
+
+# 创建 DataLoader
+batch_size=10 每次迭代加载10个样本
+shuffle=True 表示在每个epoch开始时打乱数据顺序
+dataloader = DataLoader(dataset, batch_size=10, shuffle=True)
+
+# 遍历数据
+for batch_features, batch_labels in dataloader:
+    print("Batch Features Shape:", batch_features.shape)
+    print("Batch Labels Shape:", batch_labels.shape)
+\end{lstlisting}
+
+
+\end{document}
